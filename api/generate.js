@@ -1,13 +1,14 @@
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+export async function onRequestPost(context) {
+  const { request, env } = context;
 
-  const { actividad, personaje, pasos, charDescriptions } = req.body;
-  const apiKey = process.env.GROQ_API_KEY;
+  const { actividad, personaje, pasos, charDescriptions } = await request.json();
+  const apiKey = env.GROQ_API_KEY;
 
   if (!apiKey) {
-    return res.status(500).json({ error: 'API key not configured' });
+    return new Response(JSON.stringify({ error: 'API key not configured' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   const charDesc = charDescriptions[personaje];
@@ -32,34 +33,42 @@ Rules:
 - Focus on observable actions the character is doing`;
 
   try {
-    const response = await fetch('https://api.GROQ.com/v1/chat/completions', {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 1000
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
       })
     });
 
     const data = await response.json();
-    
+
     if (!response.ok) {
-      console.error('GROQ API error:', data);
-      return res.status(500).json({ error: 'API request failed', details: data });
+      console.error('Groq API error:', data);
+      return new Response(JSON.stringify({ error: 'API request failed', details: data }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     const text = data.choices[0].message.content;
     const clean = text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
 
-    return res.status(200).json(parsed);
+    return new Response(JSON.stringify(parsed), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
     console.error('Error:', error);
-    return res.status(500).json({ error: 'Failed to generate sequence', details: error.message });
+    return new Response(
+      JSON.stringify({ error: 'Failed to generate sequence', details: error.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }
