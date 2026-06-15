@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   }
 
   const { actividad, personaje, pasos, charDescriptions } = req.body;
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
     return res.status(500).json({ error: 'API key not configured' });
@@ -32,27 +32,28 @@ Rules:
 - Focus on observable actions the character is doing`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7,
+        max_tokens: 1000
       })
     });
 
     const data = await response.json();
     
     if (!response.ok) {
-      console.error('Anthropic API error:', data);
+      console.error('OpenAI API error:', data);
       return res.status(500).json({ error: 'API request failed', details: data });
     }
 
-    const text = data.content.map(i => i.text || '').join('');
+    const text = data.choices[0].message.content;
     const clean = text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
 
