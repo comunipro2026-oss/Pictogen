@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   }
 
   const { actividad, personaje, pasos, charDescriptions } = req.body;
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
 
   if (!apiKey) {
     return res.status(500).json({ error: 'API key not configured' });
@@ -32,7 +32,7 @@ Rules:
 - Focus on observable actions the character is doing`;
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.GROQ.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -49,7 +49,7 @@ Rules:
     const data = await response.json();
     
     if (!response.ok) {
-      console.error('OpenAI API error:', data);
+      console.error('GROQ API error:', data);
       return res.status(500).json({ error: 'API request failed', details: data });
     }
 
