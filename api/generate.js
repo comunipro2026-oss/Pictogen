@@ -1,14 +1,13 @@
-export async function onRequestPost(context) {
-  const { request, env } = context;
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-  const { actividad, personaje, pasos, charDescriptions } = await request.json();
-  const apiKey = env.GROQ_API_KEY;
+  const { actividad, personaje, pasos, charDescriptions } = req.body;
+  const apiKey = process.env.GROQ_API_KEY;
 
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'API key not configured' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(500).json({ error: 'API key not configured' });
   }
 
   const charDesc = charDescriptions[personaje];
@@ -50,25 +49,16 @@ Rules:
 
     if (!response.ok) {
       console.error('Groq API error:', data);
-      return new Response(JSON.stringify({ error: 'API request failed', details: data }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(500).json({ error: 'Groq API request failed', details: data });
     }
 
     const text = data.choices[0].message.content;
     const clean = text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
 
-    return new Response(JSON.stringify(parsed), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(200).json(parsed);
   } catch (error) {
     console.error('Error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Failed to generate sequence', details: error.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    return res.status(500).json({ error: 'Failed to generate sequence', details: error.message });
   }
 }
